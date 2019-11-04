@@ -38,6 +38,7 @@ def nodeToUQModel(name, node):
     keys = list(node.outVars.keys())
     uqModel.setOutputNames(['%s.%s' % (name, key) for key in keys] )
     uqModel.setSelectedOutputs( list(range(len(keys))) )
+    uqModel.setPythonCode(node.pythonCode)
     return uqModel
 	
 def printUQModel(self):

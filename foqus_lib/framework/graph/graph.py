@@ -2072,3 +2072,10 @@ class Graph(threading.Thread):
             checknodes = checknodes.difference(delSet)
             checknodes = checknodes.union(checkUpdate)
         return order
+
+    def getPythonCode(self):
+        pythonCodeDict = {}
+        for key in self.nodes:
+            pythonCodeDict[key] = self.nodes[key].pythonCode
+
+        return pythonCodeDict

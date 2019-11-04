@@ -44,6 +44,8 @@ def flowsheetToUQModel(gr):
     keys =  gr.output.compoundNames()
     uqModel.setOutputNames(keys)
     uqModel.setSelectedOutputs(list(range(len(keys))))
+    pythonCode = gr.getPythonCode() # dictionary where keys are node names and values are node script for each node
+    uqModel.setPythonCode(pythonCode)
     return uqModel
     
 def printUQModel(self):

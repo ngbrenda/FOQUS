@@ -802,6 +802,11 @@ class ouuSetupFrame(_ouuSetupFrame, _ouuSetupFrameUI):
             inputNames = model.getInputNames()
             inputTypes = list(model.getInputTypes())
             defaultValues = model.getInputDefaults()
+            pythonCode = model.getPythonCode()
+            print('PYTHON CODE GOES HERE!!')
+            print(pythonCode)
+            print(type(pythonCode))
+
             for row in xtable:
                 if row['type'] == 'Fixed':
                     modelIndex = inputNames.index(row['name'])

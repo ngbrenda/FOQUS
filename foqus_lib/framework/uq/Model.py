@@ -121,6 +121,7 @@ class Model:
         self.emulatorTrainingFile = None
         self.namesIncludeNodes = False
         self.flowsheetFixed = None
+        self.pythonCode = None
 
     def saveFile(self, filename = 'UQModelTest.json'):
         '''
@@ -386,3 +387,9 @@ class Model:
 
     def getSelectedOutputs(self):
         return self.outputSelections
+
+    def setPythonCode(self, pythonCodeDict):
+        self.pythonCode = pythonCodeDict
+
+    def getPythonCode(self):
+        return self.pythonCode
