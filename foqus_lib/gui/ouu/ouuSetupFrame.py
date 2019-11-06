@@ -801,11 +801,17 @@ class ouuSetupFrame(_ouuSetupFrame, _ouuSetupFrameUI):
             model = copy.deepcopy(self.model)
             inputNames = model.getInputNames()
             inputTypes = list(model.getInputTypes())
+            print('THESE ARE THE INPUT TYPES:')
+            print(inputTypes)
             defaultValues = model.getInputDefaults()
-            pythonCode = model.getPythonCode()
-            print('PYTHON CODE GOES HERE!!')
-            print(pythonCode)
-            print(type(pythonCode))
+            pythonCode = ""
+            if isinstance(model.getPythonCode(), dict):
+                for key in model.getPythonCode():
+                    pythonCode += model.getPythonCode()[key] + '\n'
+            else:
+                pythonCode = model.getPythonCode()
+
+            self.writeProblemClass(pythonCode)
 
             for row in xtable:
                 if row['type'] == 'Fixed':
@@ -995,6 +1001,22 @@ class ouuSetupFrame(_ouuSetupFrame, _ouuSetupFrameUI):
 
     def getResult(self):
         return self.result
+
+    def writeProblemClass(self, code):
+        lines = code.split('\n')
+        imports = []
+        for line in lines:
+            if 'import' in line:
+                imports.append(line)
+
+        f = open('UDP.py', 'w')
+        if len(imports) > 0:
+            for item in imports:
+                f.write(item)
+                f.write('\n')
+        f.write('class UDP:\n')
+
+        f.close()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
