@@ -801,8 +801,6 @@ class ouuSetupFrame(_ouuSetupFrame, _ouuSetupFrameUI):
             model = copy.deepcopy(self.model)
             inputNames = model.getInputNames()
             inputTypes = list(model.getInputTypes())
-            print('THESE ARE THE INPUT TYPES:')
-            print(inputTypes)
             defaultValues = model.getInputDefaults()
             pythonCode = ""
             if isinstance(model.getPythonCode(), dict):
@@ -1005,16 +1003,106 @@ class ouuSetupFrame(_ouuSetupFrame, _ouuSetupFrameUI):
     def writeProblemClass(self, code):
         lines = code.split('\n')
         imports = []
+        codeBody = []
         for line in lines:
             if 'import' in line:
                 imports.append(line)
+            else:
+                codeBody.append(line)
+        # Inputs
+        primaryVariables = self.input_table.getPrimaryVariables()[0]
+        recourseVariables = self.input_table.getRecourseVariables()[0]
+        UQDiscreteVariables = self.input_table.getUQDiscreteVariables()[0]
+        continuousVariables = self.input_table.getContinuousVariables()[0]
+        nodeName = primaryVariables[0].split('.')[0]
+        decisionVarNames = []
+        for i in range(len(primaryVariables)):
+            decisionVarNames.append(primaryVariables[i].split('.')[1])
+        uncertainVarNames = []
+        for i in range(len(continuousVariables)):
+            uncertainVarNames.append(continuousVariables[i].split('.')[1])
 
-        f = open('UDP.py', 'w')
+        inputsRaw = []
+        inputs = []
+        outputsRaw = []
+        outputs = []
+        for line in codeBody:
+            inputsRaw.extend(re.findall('x\[.*?\]', line))
+            outputsRaw.extend(re.findall('f\[.*?\]', line))
+        for item in inputsRaw:
+            inputs.append(item.split('"')[1])
+        for item in outputsRaw:
+            outputs.append(item.split('"')[1])
+
+        for i in range(len(codeBody)):
+            for j in range(len(inputs)):
+                codeBody[i] = codeBody[i].replace(inputsRaw[j], inputs[j])
+            for k in range(len(outputs)):
+                codeBody[i] = codeBody[i].replace(outputsRaw[k], outputs[k])
+
+        for i in range(len(codeBody)):
+            for j in range(len(decisionVarNames)):
+                codeBody[i] = re.sub(r'\b%s\b' %decisionVarNames[j], 'x[%d]' %j, codeBody[i])
+            if len(uncertainVarNames) > 0:
+                for k in range(len(uncertainVarNames)):
+                    codeBody[i] = re.sub(r'\b%s\b' % uncertainVarNames[j], 'self.%s' % uncertainVarNames[j], codeBody[i])
+
+        numInputs = self.input_table.rowCount()
+        lower_bounds = []
+        upper_bounds = []
+        for row in range(numInputs):
+            col = self.input_table.col_index
+            if self.input_table.cellWidget(row, col['type']).currentText() == 'Opt: Primary Continuous (Z1)':
+                lower_bounds.append(self.input_table.item(row, col['min']).text())
+                upper_bounds.append(self.input_table.item(row, col['max']).text())
+
+        # Outputs
+        numOutputs = self.outputs_table.rowCount()
+        objectives = []
+        constraints = []
+        for r in range(numOutputs):
+            type = self.outputs_table.cellWidget(r, 0).currentText()
+            if type == ouuSetupFrame.ObjFuncText:
+                objectives.append(self.outputs_table.item(r, 1).text().split('.')[1])
+            elif type == ouuSetupFrame.ConstraintText:
+                constraints.append(self.outputs_table.item(r,1).text().split('.')[1])
+
+        f = open('%s.py' %nodeName.capitalize(), 'w')
         if len(imports) > 0:
             for item in imports:
                 f.write(item)
                 f.write('\n')
-        f.write('class UDP:\n')
+        f.write('class %s:\n' %nodeName.capitalize())
+        if len(continuousVariables) > 0:
+            f.write('   def __init__(self')
+            for name in uncertainVarNames:
+                f.write(', %s' %name)
+            f.write('):\n')
+            for i in range(len(continuousVariables)):
+                f.write('       self.%s = %s\n' %(uncertainVarNames[i], uncertainVarNames[i]))
+                f.write('\n')
+
+        f.write('   def fitness(self, x):\n')
+        for line in codeBody:
+            f.write('       %s\n' %line)
+        if len(constraints) > 0:
+            f.write('       return [%s, %s]\n' %((', ').join(objectives), (', ').join(constraints)))
+        else:
+            f.write('       return [%s]\n' %((', ').join(objectives)))
+        f.write('\n')
+
+        f.write('   def get_nobj(self):\n')
+        f.write('       return %d\n' %len(objectives))
+        f.write('\n')
+
+        f.write('   def get_bounds(self):\n')
+        f.write('       return ([%s], [%s])\n' %((', ').join(lower_bounds), (', ').join(upper_bounds)))
+        f.write('\n')
+
+        if len(constraints) > 0:
+            f.write('   def get_nic(self):\n')
+            f.write('       return %d\n' %len(constraints))
+            f.write('\n')
 
         f.close()
 
